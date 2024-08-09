@@ -1,6 +1,11 @@
 import Foundation
+
 public struct InjiVcRenderer {
-    public init() {}
+    private let session: URLSession
+
+    public init(session: URLSession = .shared) {
+        self.session = session
+    }
 
     public func replacePlaceholders(from jsonString: String, completion: @escaping (String?) -> Void) {
         guard let values = jsonStringToDictionary(jsonString),
@@ -51,7 +56,7 @@ public struct InjiVcRenderer {
     }
 
     private func fetchTemplate(from url: URL, completion: @escaping (String?) -> Void) {
-        let task = URLSession.shared.dataTask(with: url) { data, response, error in
+        let task = session.dataTask(with: url) { data, response, error in
             if let error = error {
                 print("Error fetching template: \(error)")
                 completion(nil)
@@ -93,7 +98,7 @@ public struct InjiVcRenderer {
         return nil
     }
 
-    private func formatDateString(_ dateString: String) -> String? {
+    public func formatDateString(_ dateString: String) -> String? {
         let dateFormats = [
             "yyyy-MM-dd'T'HH:mm:ss.SSSZ", // ISO 8601 with milliseconds
             "yyyy-MM-dd'T'HH:mm:ssZ", // ISO 8601 with timezone
