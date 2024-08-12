@@ -5,19 +5,23 @@ import PackageDescription
 
 let package = Package(
     name: "inji-vcrenderer",
+    platforms: [
+        .iOS(.v13) // Replace with minimum supported iOS version
+        // Add other platforms if necessary
+    ],
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
-            name: "InjiVcRenderer",
-            targets: ["InjiVcRenderer"]),
+            name: "inji-vcrenderer",
+            targets: ["inji-vcrenderer"]),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "InjiVcRenderer"),
+            name: "inji-vcrenderer"),
         .testTarget(
             name: "InjiVcRendererTests",
-            dependencies: ["InjiVcRenderer"]),
+            dependencies: ["inji-vcrenderer"]),
     ]
 )
