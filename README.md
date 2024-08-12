@@ -14,5 +14,5 @@ To include InjiVcRenderer in your Swift project:
 
 #### API
 
-- `replacePlaceholders(from: vcJsonString)` - expects the Verifiable Credential as parameter and returns the replaced SVG Template.
+- `renderSvg(from: vcJsonString)` - expects the Verifiable Credential as parameter and returns the replaced SVG Template.
     - `vcJsonData` - VC Downloaded in stringified format.

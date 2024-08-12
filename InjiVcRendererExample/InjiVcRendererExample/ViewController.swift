@@ -33,7 +33,7 @@ class ViewController: UIViewController {
         """
         
         // Fetch template and replace placeholders
-        renderer.replacePlaceholders(from: vcJsonString) { resultString in
+        renderer.renderSvg(from: vcJsonString) { resultString in
             if let resultString = resultString {
                 print(resultString)  // Output should format the dates as "yyyy/MM/dd"
             } else {

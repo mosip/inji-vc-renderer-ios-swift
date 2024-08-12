@@ -7,7 +7,7 @@ public struct InjiVcRenderer {
         self.session = session
     }
 
-    public func replacePlaceholders(from jsonString: String, completion: @escaping (String?) -> Void) {
+    public func renderSvg(from jsonString: String, completion: @escaping (String?) -> Void) {
         guard let values = jsonStringToDictionary(jsonString),
               let templateURL = extractTemplateURL(from: values) else {
             completion(nil)

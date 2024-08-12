@@ -44,7 +44,7 @@ class InjiVcRendererTests: XCTestCase {
     }
 
     // Test successful placeholder replacement
-    func testReplacePlaceholdersSuccess() {
+    func testRenderSvgSuccess() {
         // Define the JSON string with placeholders and data
         let jsonString = """
         {
@@ -72,7 +72,7 @@ class InjiVcRendererTests: XCTestCase {
         let expectation = self.expectation(description: "Completion handler invoked")
         var result: String?
 
-        renderer.replacePlaceholders(from: jsonString) { output in
+        renderer.renderSvg(from: jsonString) { output in
             result = output
             expectation.fulfill()
         }
@@ -90,12 +90,12 @@ class InjiVcRendererTests: XCTestCase {
     }
 
     // Test handling of invalid JSON
-    func testReplacePlaceholdersInvalidJSON() {
+    func testRenderSvgInvalidJSON() {
         let jsonString = "invalid json"
         let expectation = self.expectation(description: "Completion handler invoked")
         var result: String?
 
-        renderer.replacePlaceholders(from: jsonString) { output in
+        renderer.renderSvg(from: jsonString) { output in
             result = output
             expectation.fulfill()
         }
@@ -105,7 +105,7 @@ class InjiVcRendererTests: XCTestCase {
     }
 
     // Test handling of invalid template URL
-    func testReplacePlaceholdersInvalidTemplateURL() {
+    func testRenderSvgInvalidTemplateURL() {
         let jsonString = """
         {
             "renderMethod": [
@@ -118,7 +118,7 @@ class InjiVcRendererTests: XCTestCase {
         let expectation = self.expectation(description: "Completion handler invoked")
         var result: String?
 
-        renderer.replacePlaceholders(from: jsonString) { output in
+        renderer.renderSvg(from: jsonString) { output in
             result = output
             expectation.fulfill()
         }
