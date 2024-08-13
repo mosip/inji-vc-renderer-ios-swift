@@ -7,83 +7,90 @@ public struct InjiVcRenderer {
         self.session = session
     }
 
-    public func renderSvg(from jsonString: String, completion: @escaping (String?) -> Void) {
+    public func renderSvg(from jsonString: String) async -> String {
+        print("renderSvg")
+        
         guard let values = jsonStringToDictionary(jsonString),
               let templateURL = extractTemplateURL(from: values) else {
-            completion(nil)
-            return
+            return ""
         }
+        print("values:\n\(values)")
         
-        fetchTemplate(from: templateURL) { fetchedTemplate in
-            guard let template = fetchedTemplate else {
-                completion(nil)
-                return
-            }
-            
+      
+        do {
+                      let templateURL = "https://5825-2401-4900-1cd1-2813-4f0-c58f-b836-395d.ngrok-free.app/insurance_svg_template.svg" // Replace with your actual URL
+                      let template = try await fetchString(from: templateURL)
+                      print("Content:\n\(template)")
+                      // Assign result to a variable and use it as needed
+                      // For example:
+                      // self.processFetchedContent(content)
             var result = template
-            
-            // Regular expression to find placeholders
-            let regex = try! NSRegularExpression(pattern: "\\{\\{([^}]+)\\}\\}", options: [])
-            let matches = regex.matches(in: template, options: [], range: NSRange(location: 0, length: template.utf16.count))
-            
-            for match in matches.reversed() {
-                if let range = Range(match.range(at: 1), in: template) {
-                    let key = String(template[range])
-                    
-                    // Split key into path components
-                    let components = key.split(separator: "/").map(String.init)
-                    
-                    // Extract value from dictionary
-                    var value: Any? = values
-                    for component in components {
-                        value = (value as? [String: Any])?[component]
-                    }
-                    
-                    // Format the date if it's in a recognized format
-                    if let dateString = value as? String, let formattedDate = self.formatDateString(dateString) {
-                        value = formattedDate
-                    }
-                    
-                    // Replace placeholder with value
-                    if let value = value as? String {
-                        result = result.replacingOccurrences(of: "{{\(key)}}", with: value)
-                    }
-                }
-            }
-            
-            completion(result)
-        }
-    }
-
-    private func fetchTemplate(from url: URL, completion: @escaping (String?) -> Void) {
-        let task = session.dataTask(with: url) { data, response, error in
-            if let error = error {
-                print("Error fetching template: \(error)")
-                completion(nil)
-                return
-            }
-            
-            guard let data = data, let template = String(data: data, encoding: .utf8) else {
-                print("Failed to decode template data")
-                completion(nil)
-                return
-            }
-            
-            completion(template)
-        }
+             
+             // Regular expression to find placeholders
+             let regex = try! NSRegularExpression(pattern: "\\{\\{([^}]+)\\}\\}", options: [])
+             let matches = regex.matches(in: template, options: [], range: NSRange(location: 0, length: template.utf16.count))
+             
+             for match in matches.reversed() {
+                 if let range = Range(match.range(at: 1), in: template) {
+                     let key = String(template[range])
+                     
+                     // Split key into path components
+                     let components = key.split(separator: "/").map(String.init)
+                     
+                     // Extract value from dictionary
+                     var value: Any? = values
+                     for component in components {
+                         value = (value as? [String: Any])?[component]
+                     }
+                     
+                     // Format the date if it's in a recognized format
+                     if let dateString = value as? String, let formattedDate = self.formatDateString(dateString) {
+                         value = formattedDate
+                     }
+                     
+                     // Replace placeholder with value
+                     if let value = value as? String {
+                         result = result.replacingOccurrences(of: "{{\(key)}}", with: value)
+                     }
+                 }
+             }
+             return result
+                  } catch {
+                      print("Failed to fetch content: \(error)")
+                      return ""
+                  }
         
-        task.resume()
+       
+    }
+    func fetchString(from urlString: String) async throws -> String {
+        guard let url = URL(string: urlString) else {
+            throw NSError(domain: "Invalid URL", code: 0, userInfo: nil)
+        }
+
+        let (data, response) = try await URLSession.shared.data(from: url)
+
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw NSError(domain: "Invalid response", code: 0, userInfo: nil)
+        }
+
+        guard let string = String(data: data, encoding: .utf8) else {
+            throw NSError(domain: "Failed to convert data to string", code: 0, userInfo: nil)
+        }
+
+        return string
     }
 
-    private func extractTemplateURL(from values: [String: Any]) -> URL? {
+
+
+
+    private func extractTemplateURL(from values: [String: Any]) -> String? {
         guard let renderMethodArray = values["renderMethod"] as? [[String: Any]],
               let firstRenderMethod = renderMethodArray.first,
-              let urlString = firstRenderMethod["id"] as? String,
-              let url = URL(string: urlString) else {
-            return nil
-        }
+              let urlString = firstRenderMethod["id"] as? String else {
+                    return nil
+                }
         
-        return url
+        return urlString
     }
 
     private func jsonStringToDictionary(_ jsonString: String) -> [String: Any]? {

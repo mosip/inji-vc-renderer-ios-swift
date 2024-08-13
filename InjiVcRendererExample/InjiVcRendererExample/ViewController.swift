@@ -32,13 +32,10 @@ class ViewController: UIViewController {
         }
         """
         
-        // Fetch template and replace placeholders
-        renderer.renderSvg(from: vcJsonString) { resultString in
-            if let resultString = resultString {
-                print(resultString)  // Output should format the dates as "yyyy/MM/dd"
-            } else {
-                print("Failed to process template")
-            }
-        }
+        Task {
+            await print(renderer.renderSvg(from: vcJsonString))
+               }
+        
+        
     }
 }
