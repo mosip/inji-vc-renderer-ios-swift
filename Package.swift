@@ -13,9 +13,15 @@ let package = Package(
             name: "InjiVcRenderer",
             targets: ["InjiVcRenderer"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/mosip/pixelpass-ios-swift.git", from: "0.2.0"),
+    ],
     targets: [
         .target(
-            name: "InjiVcRenderer"),
+            name: "InjiVcRenderer",
+            dependencies: [
+                    .product(name: "pixelpass", package: "pixelpass-ios-swift"),
+                ]),
         .testTarget(
             name: "InjiVcRendererTests",
             dependencies: ["InjiVcRenderer"]),

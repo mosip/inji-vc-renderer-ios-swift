@@ -1,13 +1,21 @@
 import Foundation
+import pixelpass
 
 public struct InjiVcRenderer {
     private let session: URLSession
+    
+    let QRCODE_IMAGE_TYPE = "data:image/png;base64,"
+    
+    let QRCODE_PLACEHOLDER = "{{qrCodeImage}}"
 
     public init(session: URLSession = .shared) {
         self.session = session
     }
 
     public func renderSvg(from jsonString: String) async -> String {
+        
+
+        
         
         guard let values = jsonStringToDictionary(jsonString),
               let templateURL = extractTemplateURL(from: values) else {
@@ -16,7 +24,11 @@ public struct InjiVcRenderer {
         }
         
         do {
-            let template = try await fetchString(from: templateURL)
+            var template = try await fetchString(from: templateURL)
+            
+            if let base64String = updateQrCode(jsonString) {
+                template = template.replacingOccurrences(of: QRCODE_PLACEHOLDER, with: base64String)
+            }
             print("Fetched template content: \(template)")
             
             var result = template
@@ -107,6 +119,16 @@ public struct InjiVcRenderer {
             } catch {
                 print("Error deserializing JSON: \(error)")
             }
+        }
+        return nil
+    }
+    
+    
+    private func updateQrCode(_ vcJson: String) -> String? {
+        let pixelPass = PixelPass()
+        if let qrCodeData = pixelPass.generateQRCode(data: vcJson,  ecc: .M, header: "HDR") {
+            let base64String = QRCODE_IMAGE_TYPE+qrCodeData.base64EncodedString()
+            return base64String
         }
         return nil
     }
