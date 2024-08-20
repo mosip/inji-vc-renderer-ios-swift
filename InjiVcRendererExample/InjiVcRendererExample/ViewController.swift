@@ -2,15 +2,13 @@ import UIKit
 import InjiVcRenderer
 
 class ViewController: UIViewController {
+    
     private var renderedSvg: String = ""
+    
     override func viewDidLoad() {
+        
         super.viewDidLoad()
-        
-        
         let renderer = InjiVcRenderer()
-        
-        
-        
         let vcJsonString = """
         {
             "credentialSubject": {
@@ -40,5 +38,4 @@ class ViewController: UIViewController {
             print("Rendered SVG: \(svg)")
         }
     }
-    
 }

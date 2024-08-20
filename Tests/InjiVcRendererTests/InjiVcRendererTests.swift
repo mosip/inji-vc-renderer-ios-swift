@@ -17,7 +17,6 @@ class InjiVcRendererTests: XCTestCase {
             }
         }
         """
-        
         let templateContent = """
         <svg>
             <text>{{key1}}</text>
@@ -30,7 +29,6 @@ class InjiVcRendererTests: XCTestCase {
                                            statusCode: 200,
                                            httpVersion: nil,
                                            headerFields: nil)
-        
         let mockSession = MockURLSession()
         mockSession.mockData = mockData
         mockSession.mockResponse = mockResponse
