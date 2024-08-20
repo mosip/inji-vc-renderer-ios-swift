@@ -7,9 +7,8 @@ Swift library to render VC with SVG template support. Replaces the placeholders 
 
 To include InjiVcRenderer in your Swift project:
 
-- Clone the InjiVcRenderer library locally.
 - Create a new Swift project.
-- Add package dependency: InjiVcRenderer
+- Add package dependency: Enter Package URL of InjiVcRenderer repo
 
 
 #### API

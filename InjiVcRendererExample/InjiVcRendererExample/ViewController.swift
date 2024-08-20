@@ -2,11 +2,14 @@ import UIKit
 import InjiVcRenderer
 
 class ViewController: UIViewController {
+    private var renderedSvg: String = ""
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        // Instantiate the renderer
+        
         let renderer = InjiVcRenderer()
+        
+        
         
         let vcJsonString = """
         {
@@ -33,9 +36,9 @@ class ViewController: UIViewController {
         """
         
         Task {
-            await print(renderer.renderSvg(from: vcJsonString))
-               }
-        
-        
+            let svg = await renderer.renderSvg(from: vcJsonString)
+            print("Rendered SVG: \(svg)")
+        }
     }
+    
 }

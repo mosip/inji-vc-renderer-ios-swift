@@ -1,20 +1,84 @@
 import XCTest
 @testable import InjiVcRenderer
 
-// Mock URLSession
-class MockURLSession: URLSession {
-    var data: Data?
-    var error: Error?
 
-    override func dataTask(with url: URL, completionHandler: @escaping (Data?, URLResponse?, Error?) -> Void) -> URLSessionDataTask {
-        let task = MockURLSessionDataTask {
-            completionHandler(self.data, nil, self.error)
+
+class InjiVcRendererTests: XCTestCase {
+
+    func testRenderSvgSuccess() async {
+        let jsonString = """
+        {
+            "renderMethod": [
+                { "id": "https://example.com/template.svg" }
+            ],
+            "key1": "value1",
+            "key2": {
+                "nestedKey": "nestedValue"
+            }
         }
-        return task
+        """
+        
+        let templateContent = """
+        <svg>
+            <text>{{key1}}</text>
+            <text>{{key2/nestedKey}}</text>
+        </svg>
+        """
+        
+        let mockData = templateContent.data(using: .utf8)
+        let mockResponse = HTTPURLResponse(url: URL(string: "https://example.com/template.svg")!,
+                                           statusCode: 200,
+                                           httpVersion: nil,
+                                           headerFields: nil)
+        
+        let mockSession = MockURLSession()
+        mockSession.mockData = mockData
+        mockSession.mockResponse = mockResponse
+        
+        let renderer = InjiVcRenderer(session: mockSession)
+        let result = await renderer.renderSvg(from: jsonString)
+        
+        let expectedResult = """
+        <svg>
+            <text>value1</text>
+            <text>nestedValue</text>
+        </svg>
+        """
+        
+        XCTAssertEqual(result, expectedResult, "The rendered SVG did not match the expected result")
+    }
+    
+    func testRenderSvgFailure() async {
+        let jsonString = """
+        {
+            "renderMethod": [
+                { "id": "https://example.com/template.svg" }
+            ]
+        }
+        """
+        
+        let mockSession = MockURLSession()
+        mockSession.mockError = NSError(domain: "Test", code: 1, userInfo: nil)
+        
+        let renderer = InjiVcRenderer(session: mockSession)
+        let result = await renderer.renderSvg(from: jsonString)
+        
+        XCTAssertEqual(result, "", "The result should be an empty string when fetching content fails")
     }
 }
 
-// Mock URLSessionDataTask
+class MockURLSession: URLSession {
+    var mockData: Data?
+    var mockResponse: URLResponse?
+    var mockError: Error?
+
+    override func dataTask(with request: URLRequest, completionHandler: @escaping (Data?, URLResponse?, Error?) -> Void) -> URLSessionDataTask {
+        return MockURLSessionDataTask {
+            completionHandler(self.mockData, self.mockResponse, self.mockError)
+        }
+    }
+}
+
 class MockURLSessionDataTask: URLSessionDataTask {
     private let closure: () -> Void
 
@@ -24,120 +88,5 @@ class MockURLSessionDataTask: URLSessionDataTask {
 
     override func resume() {
         closure()
-    }
-}
-
-class InjiVcRendererTests: XCTestCase {
-    var renderer: InjiVcRenderer!
-    var mockSession: MockURLSession!
-
-    override func setUp() {
-        super.setUp()
-        mockSession = MockURLSession()
-        renderer = InjiVcRenderer(session: mockSession)
-    }
-
-    override func tearDown() {
-        renderer = nil
-        mockSession = nil
-        super.tearDown()
-    }
-
-    // Test successful placeholder replacement
-    func testRenderSvgSuccess() {
-        // Define the JSON string with placeholders and data
-        let jsonString = """
-        {
-            "renderMethod": [
-                {
-                    "id": "http://example.com/template"
-                }
-            ],
-            "user": {
-                "name": "John Doe",
-                "joinDate": "2024-01-15T10:00:00Z"
-            }
-        }
-        """
-        
-        // Define the expected template and output
-        let expectedTemplate = """
-        Hello, {{user/name}}! You joined on {{user/joinDate}}.
-        """
-        let expectedOutput = "Hello, John Doe! You joined on 2024/01/15."
-        
-        // Set up the mock session to return the expected template
-        mockSession.data = expectedTemplate.data(using: .utf8)
-
-        let expectation = self.expectation(description: "Completion handler invoked")
-        var result: String?
-
-        renderer.renderSvg(from: jsonString) { output in
-            result = output
-            expectation.fulfill()
-        }
-
-        waitForExpectations(timeout: 1.0) { error in
-            if let error = error {
-                XCTFail("Expectation failed with error: \(error)")
-            }
-            // Print result for debugging
-            print("Result: \(String(describing: result))")
-            print("Expected Output: \(expectedOutput)")
-        }
-
-        XCTAssertEqual(result, expectedOutput)
-    }
-
-    // Test handling of invalid JSON
-    func testRenderSvgInvalidJSON() {
-        let jsonString = "invalid json"
-        let expectation = self.expectation(description: "Completion handler invoked")
-        var result: String?
-
-        renderer.renderSvg(from: jsonString) { output in
-            result = output
-            expectation.fulfill()
-        }
-
-        waitForExpectations(timeout: 1.0, handler: nil)
-        XCTAssertNil(result)
-    }
-
-    // Test handling of invalid template URL
-    func testRenderSvgInvalidTemplateURL() {
-        let jsonString = """
-        {
-            "renderMethod": [
-                {
-                    "id": "invalid-url"
-                }
-            ]
-        }
-        """
-        let expectation = self.expectation(description: "Completion handler invoked")
-        var result: String?
-
-        renderer.renderSvg(from: jsonString) { output in
-            result = output
-            expectation.fulfill()
-        }
-
-        waitForExpectations(timeout: 1.0, handler: nil)
-        XCTAssertNil(result)
-    }
-
-    // Test date formatting
-    func testDateFormatting() {
-        let dateString = "2024-01-15T10:00:00Z"
-        let formattedDate = renderer.formatDateString(dateString)
-        XCTAssertEqual(formattedDate, "2024/01/15")
-    }
-
-    // Test invalid date format
-    func testInvalidDateFormatting() {
-        let dateString = "invalid-date"
-        let formattedDate = renderer.formatDateString(dateString)
-        XCTAssertNil(formattedDate)
     }
 }
