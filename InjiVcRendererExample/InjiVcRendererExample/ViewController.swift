@@ -19,10 +19,15 @@ class ViewController: UIViewController {
                 "email": "john.doe@example.com",
                 "mobile": "1234567890",
                 "policyIssuedOn": "2024-07-01",
-                "policyExpiresOn": "2024-12-31"
+                "policyExpiresOn": "2024-12-31",
+                "benefits": [
+                    "Critical Surgery",
+                    "Full body checkup"
+                ]
             },
             "issuanceDate": "2024-05-09T09:10:05.450Z",
             "expirationDate": "2024-12-31T23:59:59.999Z",
+        
              "renderMethod": [{
                   "id": "https://<host-url>/insurance_svg_template.svg",
                   "type": "SvgRenderingTemplate",

@@ -6,6 +6,8 @@ public struct InjiVcRenderer {
     private let session: URLSession
     private let QRCODE_IMAGE_TYPE = "data:image/png;base64,"
     private let QRCODE_PLACEHOLDER = "{{qrCodeImage}}"
+    private let BENEFITS_PLACEHOLDER = "{{credentialSubject/benefits}}"
+    private let PLACEHOLDER_REGEX_PATTERN = "\\{\\{([^}]+)\\}\\}"
 
     public init(session: URLSession = .shared) {
         self.session = session
@@ -19,14 +21,19 @@ public struct InjiVcRenderer {
         }
         do {
             var template = try await fetchString(from: templateURL)
-            if let base64String = updateQrCode(jsonString) {
-                template = template.replacingOccurrences(of: QRCODE_PLACEHOLDER, with: base64String)
-            }
-            print("Fetched template content: \(template)")
+            
+             if let base64String = replaceQRCode(jsonString) {
+                 template = template.replacingOccurrences(of: QRCODE_PLACEHOLDER, with: base64String)
+             }
+             
+             if let benefitsString = replaceBenefits(from: values) {
+                 template = template.replacingOccurrences(of: BENEFITS_PLACEHOLDER, with: benefitsString)
+             }
+            
             var result = template
             let regex: NSRegularExpression
             do {
-                regex = try NSRegularExpression(pattern: "\\{\\{([^}]+)\\}\\}", options: [])
+                regex = try NSRegularExpression(pattern: PLACEHOLDER_REGEX_PATTERN, options: [])
             } catch {
                 print("Invalid regular expression pattern: \(error)")
                 return ""
@@ -102,12 +109,20 @@ public struct InjiVcRenderer {
         return nil
     }
     
-    private func updateQrCode(_ vcJson: String) -> String? {
+    private func replaceQRCode(_ vcJson: String) -> String? {
         let pixelPass = PixelPass()
         if let qrCodeData = pixelPass.generateQRCode(data: vcJson,  ecc: .M, header: "HDR") {
             let base64String = QRCODE_IMAGE_TYPE+qrCodeData.base64EncodedString()
             return base64String
         }
         return nil
+    }
+    
+    private func replaceBenefits(from values: [String: Any]) -> String? {
+        guard let credentialSubject = values["credentialSubject"] as? [String: Any],
+              let benefitsArray = credentialSubject["benefits"] as? [String] else {
+            return nil
+        }
+        return benefitsArray.joined(separator: ", ")
     }
 }
