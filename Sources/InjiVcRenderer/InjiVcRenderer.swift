@@ -6,13 +6,17 @@ public struct InjiVcRenderer {
     private let session: URLSession
     private let QRCODE_IMAGE_TYPE = "data:image/png;base64,"
     private let QRCODE_PLACEHOLDER = "{{qrCodeImage}}"
-    private let BENEFITS_PLACEHOLDER = "{{credentialSubject/benefits}}"
     private let PLACEHOLDER_REGEX_PATTERN = "\\{\\{([^}]+)\\}\\}"
-
+    
+    private let BENEFITS_PLACEHOLDER_1 = "{{benefits1}}"
+    private let BENEFITS_PLACEHOLDER_2 = "{{benefits2}}"
+    let FULL_ADDRESS_PLACEHOLDER_1 = "{{fullAddress1}}"
+    let FULL_ADDRESS_PLACEHOLDER_2 = "{{fullAddress2}}"
+    
     public init(session: URLSession = .shared) {
         self.session = session
     }
-
+    
     public func renderSvg(from jsonString: String) async -> String {
         guard let values = jsonStringToDictionary(jsonString),
               let templateURL = extractTemplateURL(from: values) else {
@@ -22,43 +26,88 @@ public struct InjiVcRenderer {
         do {
             var template = try await fetchString(from: templateURL)
             
-             if let base64String = replaceQRCode(jsonString) {
-                 template = template.replacingOccurrences(of: QRCODE_PLACEHOLDER, with: base64String)
-             }
-             
-             if let benefitsString = replaceBenefits(from: values) {
-                 template = template.replacingOccurrences(of: BENEFITS_PLACEHOLDER, with: benefitsString)
-             }
+            if let base64String = replaceQRCode(jsonString) {
+                template = template.replacingOccurrences(of: QRCODE_PLACEHOLDER, with: base64String)
+            }
             
-            var result = template
-            let regex: NSRegularExpression
-            do {
-                regex = try NSRegularExpression(pattern: PLACEHOLDER_REGEX_PATTERN, options: [])
-            } catch {
-                print("Invalid regular expression pattern: \(error)")
-                return ""
-            }
-            let matches = regex.matches(in: template, options: [], range: NSRange(location: 0, length: template.utf16.count))
-            for match in matches.reversed() {
-                if let range = Range(match.range(at: 1), in: template) {
-                    let key = String(template[range])
-                    let components = key.split(separator: "/").map(String.init)
-                    var value: Any? = values
-                    for component in components {
-                        value = (value as? [String: Any])?[component]
-                    }
-                    if let value = value as? String {
-                        result = result.replacingOccurrences(of: "{{\(key)}}", with: value)
-                    }
-                }
-            }
-            return result
+            template = replaceBenefits(jsonObject: values, svgTemplate: template)
+            
+            template = replaceAddress(jsonObject: values, svgTemplate: template)
+            
+            // Replace other placeholders
+            template = replacePlaceholders(in: template, with: values)
+            
+            return template
         } catch {
             print("Failed to fetch content: \(error)")
             return ""
         }
     }
-
+    
+    private func replaceMultiLinePlaceholders(svgTemplate: String,
+                                              dataToSplit: String,
+                                              maxLength: Int,
+                                              placeholdersList: [String]) -> String {
+        do {
+            let segments = dataToSplit.chunked(into: maxLength).prefix(2)
+            var replacedSvg = svgTemplate
+            for (index, placeholder) in placeholdersList.enumerated() {
+                if index < segments.count {
+                    replacedSvg = replacedSvg.replacingOccurrences(of: placeholder, with: segments[index], options: .literal, range: replacedSvg.range(of: placeholder))
+                }
+            }
+            return replacedSvg
+        } catch {
+            print("Error replacing placeholders: \(error)")
+            return svgTemplate
+        }
+    }
+    
+    
+    private func replaceBenefits(jsonObject: [String: Any], svgTemplate: String) -> String {
+        do {
+            guard let credentialSubject = jsonObject["credentialSubject"] as? [String: Any],
+                  let benefitsArray = credentialSubject["benefits"] as? [String] else {
+                return svgTemplate
+            }
+            
+            let benefitsString = benefitsArray.joined(separator: ",")
+            let benefitsPlaceholderList = [BENEFITS_PLACEHOLDER_1, BENEFITS_PLACEHOLDER_2]
+            let replacedSvgWithBenefits = replaceMultiLinePlaceholders(svgTemplate: svgTemplate, dataToSplit: benefitsString, maxLength: 55, placeholdersList: benefitsPlaceholderList)
+            
+            return replacedSvgWithBenefits
+        } catch {
+            print("Error replacing benefits: \(error)")
+            return svgTemplate
+        }
+    }
+    
+    private func replaceAddress(jsonObject: [String: Any], svgTemplate: String) -> String {
+        do {
+            guard let credentialSubject = jsonObject["credentialSubject"] as? [String: Any] else {
+                return svgTemplate
+            }
+            
+            let fields = ["addressLine1", "addressLine2", "addressLine3", "city", "province", "region", "postalCode"]
+            var values = [String]()
+            
+            for field in fields {
+                if let array = credentialSubject[field] as? [[String: Any]], let value = array.first?["value"] as? String, !value.trimmingCharacters(in: .whitespaces).isEmpty {
+                    values.append(value.trimmingCharacters(in: .whitespaces))
+                }
+            }
+            
+            let fullAddress = values.joined(separator: ",")
+            let addressPlaceholderList = [FULL_ADDRESS_PLACEHOLDER_1, FULL_ADDRESS_PLACEHOLDER_2]
+            let replacedSvgWithFullAddress = replaceMultiLinePlaceholders(svgTemplate: svgTemplate, dataToSplit: fullAddress, maxLength: 55, placeholdersList: addressPlaceholderList)
+            
+            return replacedSvgWithFullAddress
+        } catch {
+            print("Error replacing address: \(error)")
+            return svgTemplate
+        }
+    }
+    
     private func fetchString(from urlString: String) async throws -> String {
         guard let url = URL(string: urlString) else {
             throw URLError(.badURL)
@@ -87,7 +136,7 @@ public struct InjiVcRenderer {
             task.resume()
         }
     }
-
+    
     private func extractTemplateURL(from values: [String: Any]) -> String? {
         guard let renderMethodArray = values["renderMethod"] as? [[String: Any]],
               let firstRenderMethod = renderMethodArray.first,
@@ -96,7 +145,7 @@ public struct InjiVcRenderer {
         }
         return urlString
     }
-
+    
     private func jsonStringToDictionary(_ jsonString: String) -> [String: Any]? {
         if let data = jsonString.data(using: .utf8) {
             do {
@@ -112,17 +161,66 @@ public struct InjiVcRenderer {
     private func replaceQRCode(_ vcJson: String) -> String? {
         let pixelPass = PixelPass()
         if let qrCodeData = pixelPass.generateQRCode(data: vcJson,  ecc: .M, header: "HDR") {
-            let base64String = QRCODE_IMAGE_TYPE+qrCodeData.base64EncodedString()
+            let base64String = QRCODE_IMAGE_TYPE + qrCodeData.base64EncodedString()
             return base64String
         }
         return nil
     }
     
-    private func replaceBenefits(from values: [String: Any]) -> String? {
-        guard let credentialSubject = values["credentialSubject"] as? [String: Any],
-              let benefitsArray = credentialSubject["benefits"] as? [String] else {
-            return nil
+    private func replacePlaceholders(in template: String, with values: [String: Any]) -> String {
+        var result = template
+        let regex: NSRegularExpression
+        do {
+            regex = try NSRegularExpression(pattern: PLACEHOLDER_REGEX_PATTERN, options: [])
+        } catch {
+            print("Invalid regular expression pattern: \(error)")
+            return template
         }
-        return benefitsArray.joined(separator: ", ")
+        
+        let matches = regex.matches(in: template, options: [], range: NSRange(location: 0, length: template.utf16.count))
+        for match in matches.reversed() {
+            if let range = Range(match.range(at: 1), in: template) {
+                let key = String(template[range])
+                let value = resolvePlaceholder(key, in: values) ?? ""
+                result = result.replacingOccurrences(of: "{{\(key)}}", with: value)
+            }
+        }
+        return result
+    }
+
+    private func resolvePlaceholder(_ key: String, in values: [String: Any]) -> String? {
+        let components = key.split(separator: "/").map(String.init)
+        var value: Any? = values
+        
+        for (index, component) in components.enumerated() {
+            if let array = value as? [Any], let index = Int(component), index < array.count {
+                value = array[index]
+            } else {
+                value = (value as? [String: Any])?[component]
+            }
+            
+            if value == nil {
+                return nil
+            }
+        }
+        
+        if let value = value as? String {
+            return value
+        } else if let value = value as? [String: Any], let firstValue = value.first?.value as? String {
+            return firstValue
+        }
+        return nil
+    }
+
+}
+
+extension String {
+    func chunked(into size: Int) -> [String] {
+        guard size > 0 else { return [] }
+        return stride(from: 0, to: count, by: size).map {
+            let start = index(startIndex, offsetBy: $0)
+            let end = index(start, offsetBy: size, limitedBy: endIndex) ?? endIndex
+            return String(self[start..<end])
+        }
     }
 }
