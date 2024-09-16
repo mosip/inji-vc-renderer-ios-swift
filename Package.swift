@@ -1,10 +1,11 @@
-// swift-tools-version: 5.10
+// swift-tools-version: 5.7.0
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 import PackageDescription
 
 let package = Package(
     name: "InjiVcRenderer",
     platforms: [
+        .macOS(.v11),
         .iOS(.v13)
     ],
     products: [
