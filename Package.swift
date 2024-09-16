@@ -23,6 +23,9 @@ let package = Package(
                 ]),
         .testTarget(
             name: "InjiVcRendererTests",
-            dependencies: ["InjiVcRenderer"]),
+            dependencies: [
+                "InjiVcRenderer",
+                .product(name: "pixelpass", package: "pixelpass-ios-swift"),
+            ]),
     ]
 )

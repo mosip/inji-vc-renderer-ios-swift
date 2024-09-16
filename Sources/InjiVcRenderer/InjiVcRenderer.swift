@@ -44,7 +44,7 @@ public struct InjiVcRenderer {
         }
     }
     
-    private func replaceMultiLinePlaceholders(svgTemplate: String,
+    public func replaceMultiLinePlaceholders(svgTemplate: String,
                                               dataToSplit: String,
                                               maxLength: Int,
                                               placeholdersList: [String]) -> String {
@@ -64,7 +64,7 @@ public struct InjiVcRenderer {
     }
     
     
-    private func replaceBenefits(jsonObject: [String: Any], svgTemplate: String) -> String {
+    public func replaceBenefits(jsonObject: [String: Any], svgTemplate: String) -> String {
         do {
             guard let credentialSubject = jsonObject["credentialSubject"] as? [String: Any],
                   let benefitsArray = credentialSubject["benefits"] as? [String] else {
@@ -82,7 +82,7 @@ public struct InjiVcRenderer {
         }
     }
     
-    private func replaceAddress(jsonObject: [String: Any], svgTemplate: String) -> String {
+    public func replaceAddress(jsonObject: [String: Any], svgTemplate: String) -> String {
         do {
             guard let credentialSubject = jsonObject["credentialSubject"] as? [String: Any] else {
                 return svgTemplate
