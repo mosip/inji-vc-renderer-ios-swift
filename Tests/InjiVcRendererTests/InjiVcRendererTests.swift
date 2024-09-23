@@ -7,10 +7,6 @@ import XCTest
 
 class InjiVcRendererTests: XCTestCase {
     
-    private let BENEFITS_PLACEHOLDER_1 = "{{benefits1}}"
-    private let BENEFITS_PLACEHOLDER_2 = "{{benefits2}}"
-    let FULL_ADDRESS_PLACEHOLDER_1 = "{{fullAddress1}}"
-    let FULL_ADDRESS_PLACEHOLDER_2 = "{{fullAddress2}}"
 
     func testRenderSvgSuccess() async {
         let jsonString = """
@@ -18,16 +14,18 @@ class InjiVcRendererTests: XCTestCase {
             "renderMethod": [
                 { "id": "https://example.com/template.svg" }
             ],
-            "key1": "value1",
-            "key2": {
-                "nestedKey": "nestedValue"
+            "credentialSubject" : {
+                "fullName": "Tester",
+                "gender": {
+                    "eng": "Male"
+                }
             }
         }
         """
         let templateContent = """
         <svg>
-            <text>{{key1}}</text>
-            <text>{{key2/nestedKey}}</text>
+            <text>{{credentialSubject/fullName}}</text>
+            <text>{{credentialSubject/gender}}</text>
         </svg>
         """
         
@@ -41,17 +39,18 @@ class InjiVcRendererTests: XCTestCase {
         mockSession.mockResponse = mockResponse
         
         let renderer = InjiVcRenderer(session: mockSession)
-        let result = await renderer.renderSvg(from: jsonString)
+        let result = await renderer.renderSvg(vcJsonString: jsonString)
         
         let expectedResult = """
         <svg>
-            <text>value1</text>
-            <text>nestedValue</text>
+            <text>Tester</text>
+            <text>Male</text>
         </svg>
         """
         
         XCTAssertEqual(result, expectedResult, "The rendered SVG did not match the expected result")
     }
+    
     
     func testRenderSvgFailure() async {
         let jsonString = """
@@ -66,74 +65,104 @@ class InjiVcRendererTests: XCTestCase {
         mockSession.mockError = NSError(domain: "Test", code: 1, userInfo: nil)
         
         let renderer = InjiVcRenderer(session: mockSession)
-        let result = await renderer.renderSvg(from: jsonString)
+        let result = await renderer.renderSvg(vcJsonString: jsonString)
         
         XCTAssertEqual(result, "", "The result should be an empty string when fetching content fails")
     }
     
-       private func createPlaceholders(for type: String) -> [String] {
-           switch type {
-           case "benefits":
-               return [BENEFITS_PLACEHOLDER_1, BENEFITS_PLACEHOLDER_2]
-           case "address":
-               return [FULL_ADDRESS_PLACEHOLDER_1, FULL_ADDRESS_PLACEHOLDER_2]
-           default:
-               return []
-           }
-       }
-       
-       func testReplaceMultiLinePlaceholders() {
-           let mockSession = MockURLSession()
-           
-           let renderer = InjiVcRenderer(session: mockSession)
-           let svgTemplate = "<svg>{{fullAddress1}},{{fullAddress2}}</svg>"
-           let dataToSplit = "TestData1TestData2TestData3"
-           let maxLength = 10
-           let placeholders = [FULL_ADDRESS_PLACEHOLDER_1, FULL_ADDRESS_PLACEHOLDER_2 ]
+    func testLocaleBasedFieldReplacement() {
+        
+        let svgTemplateWithLocale = "<svg>{{credentialSubject/gender/eng}}</svg>"
+        let svgTemplateWithoutLocale = "<svg>{{credentialSubject/gender}}</svg>"
+        let svgTemplateWithUnavailableLocale = "<svg>{{credentialSubject/gender}}</svg>"
+        let svgTemplateWithInvalidKey = "<svg>{{credentialSubject/gend}}</svg>"
+        
+        let processedJson = [
+            "credentialSubject": [
+              "gender": ["eng": "English Male", "tam": "Tamil Male"]
+            ]
+        ]
+        
+        let expected = "<svg>English Male</svg>"
+        
+        let result1 = InjiVcRenderer().replacePlaceholders(svgTemplate: svgTemplateWithLocale, processedJson: processedJson);
+        XCTAssertEqual(result1, expected)
+        
+        let result2 = InjiVcRenderer().replacePlaceholders(svgTemplate: svgTemplateWithoutLocale, processedJson: processedJson);
+        XCTAssertEqual(result2, expected)
+        
+        let result3 = InjiVcRenderer().replacePlaceholders(svgTemplate: svgTemplateWithUnavailableLocale, processedJson: processedJson);
+        XCTAssertEqual(result3, expected)
 
-           let result = renderer.replaceMultiLinePlaceholders(svgTemplate: svgTemplate, dataToSplit: dataToSplit, maxLength: maxLength, placeholdersList: placeholders)
+        let result4 = InjiVcRenderer().replacePlaceholders(svgTemplate: svgTemplateWithInvalidKey, processedJson: processedJson);
+        XCTAssertEqual(result4, "<svg></svg>")
+        
+        
+    }
+    
+    func testAddressFieldsReplacement() {
+        let svgTemplateWithLocale = "<svg>{{credentialSubject/fullAddressLine1/eng}}</svg>"
+        let svgTemplateWithoutLocale = "<svg>{{credentialSubject/fullAddressLine1}}</svg>"
+        let svgTemplateWithUnavailableLocale = "<svg>{{credentialSubject/fullAddressLine1/fr}}</svg>"
 
-           let expected = "<svg>TestData1T,estData2Te</svg>"
-           XCTAssertEqual(result, expected)
-       }
+        let processedJson = [
+            "credentialSubject": [
+              "fullAddressLine1": ["eng": "Test Address1, Test City"]
+            ]
+        ]
 
-       func testReplaceBenefits() {
-           let mockSession = MockURLSession()
-           
-           let renderer = InjiVcRenderer(session: mockSession)
-           let svgTemplate = "<svg>{{benefits1}},{{benefits2}}</svg>"
-           let jsonObject: [String: Any] = [
-               "credentialSubject": [
-                   "benefits": ["Benefit1", "Benefit2", "Benefit3", "Benefit4", "Benefit5", "Benefit6", "Benefit7", "Benefit8", "Benefit9"]
-               ]
-           ]
-           
-           let result = renderer.replaceBenefits(jsonObject: jsonObject, svgTemplate: svgTemplate)
+        let result1 = InjiVcRenderer().replacePlaceholders(svgTemplate: svgTemplateWithLocale, processedJson: processedJson)
+        XCTAssertEqual(result1, "<svg>Test Address1, Test City</svg>")
+        
+        let result2 = InjiVcRenderer().replacePlaceholders(svgTemplate: svgTemplateWithoutLocale, processedJson: processedJson)
+        XCTAssertEqual(result2, "<svg>Test Address1, Test City</svg>")
+        
+        let result3 = InjiVcRenderer().replacePlaceholders(svgTemplate: svgTemplateWithUnavailableLocale, processedJson: processedJson)
+        XCTAssertEqual(result3, "<svg>Test Address1, Test City</svg>")
 
-           let expected = "<svg>Benefit1,Benefit2,Benefit3,Benefit4,Benefit5,Benefit6,B,enefit7,Benefit8,Benefit9</svg>"
-           XCTAssertEqual(result, expected)
-       }
+    }
+    
+    func testAddressFieldsReplacementWithEmpty() {
+        let svgTemplate = "<svg>{{credentialSubject/fullAddressLine1/eng}}</svg>"
 
-       func testReplaceAddress() {
-           let mockSession = MockURLSession()
-           
-           let renderer = InjiVcRenderer(session: mockSession)
-           let svgTemplate = "<svg>{{fullAddress1}}{{fullAddress2}}</svg>"
-           let jsonObject: [String: Any] = [
-               "credentialSubject": [
-                   "addressLine1": [["value": "123 Main St, 123 Main St"]],
-                   "addressLine2": [["value": "Suite 4B, Suite 4B"]],
-                   "city": [["value": "Metropolis"]],
-                   "province": [["value": "NY"]],
-                   "postalCode": [["value": "12345"]]
-               ]
-           ]
-           
-           let result = renderer.replaceAddress(jsonObject: jsonObject, svgTemplate: svgTemplate)
+        let processedJson = [
+            "credentialSubject": [
+              "fullAddressLine1": []
+            ]
+        ]
 
-           let expected = "<svg>123 Main St, 123 Main St,Suite 4B, Suite 4B,Metropolis,NY,12345</svg>"
-           XCTAssertEqual(result, expected)
-       }
+        let result1 = InjiVcRenderer().replacePlaceholders(svgTemplate: svgTemplate, processedJson: processedJson)
+        XCTAssertEqual(result1, "<svg></svg>")
+
+    }
+    
+    func testBenefitsFieldsReplacement() {
+        let svgTemplate = "<svg>{{credentialSubject/benefitsLine1}}</svg>"
+
+        let processedJson = [
+            "credentialSubject": [
+              "benefitsLine1": "Full body check up, Critical Surgery"
+            ]
+        ]
+
+        let result1 = InjiVcRenderer().replacePlaceholders(svgTemplate: svgTemplate, processedJson: processedJson)
+        XCTAssertEqual(result1, "<svg>Full body check up, Critical Surgery</svg>")
+
+    }
+    
+    func testBenefitsFieldsReplacementWithEmpty() {
+        let svgTemplate = "<svg>{{credentialSubject/benefitsLine1}}</svg>"
+
+        let processedJson = [
+            "credentialSubject": [
+            ]
+        ]
+
+        let result1 = InjiVcRenderer().replacePlaceholders(svgTemplate: svgTemplate, processedJson: processedJson)
+        XCTAssertEqual(result1, "<svg></svg>")
+
+    }
+
 }
 
 class MockURLSession: URLSession {
