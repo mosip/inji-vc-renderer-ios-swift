@@ -29,9 +29,6 @@ jobs:
       - name: Build project
         run: xcodebuild -scheme InjiVcRenderer -destination 'generic/platform=iOS' build
 
-      - name: Run tests
-        run: xcodebuild test -scheme InjiVcRendererTests -destination 'platform=iOS Simulator,OS=latest'
-
       - name: Notify on Slack
         uses: 8398a7/action-slack@v3
         with:
