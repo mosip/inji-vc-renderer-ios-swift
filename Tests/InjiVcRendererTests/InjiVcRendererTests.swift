@@ -51,6 +51,32 @@ class InjiVcRendererTests: XCTestCase {
         XCTAssertEqual(result, expectedResult, "The rendered SVG did not match the expected result")
     }
     
+    func testRenderSvgFailureEmptyJson() async {
+        let jsonString = """
+        """
+        let templateContent = """
+        <svg>
+            <text>{{credentialSubject/fullName}}</text>
+            <text>{{credentialSubject/gender}}</text>
+        </svg>
+        """
+        
+        let mockData = templateContent.data(using: .utf8)
+        let mockResponse = HTTPURLResponse(url: URL(string: "https://example.com/template.svg")!,
+                                           statusCode: 200,
+                                           httpVersion: nil,
+                                           headerFields: nil)
+        let mockSession = MockURLSession()
+        mockSession.mockData = mockData
+        mockSession.mockResponse = mockResponse
+        
+        let renderer = InjiVcRenderer(session: mockSession)
+        let result = await renderer.renderSvg(vcJsonString: jsonString)
+        
+        
+        XCTAssertEqual(result, "", "VcJson is empty")
+    }
+    
     
     func testRenderSvgFailure() async {
         let jsonString = """

@@ -78,7 +78,7 @@ public class PreProcessor {
         return updatedJsonObject
     }
 
-    func getFieldNameFromPlaceholder(_ placeholder: String) -> String {
+    public func getFieldNameFromPlaceholder(_ placeholder: String) -> String {
         guard let regex = try? NSRegularExpression(pattern: PreProcessor.GET_PLACEHOLDER_REGEX, options: []) else {
             return ""
         }
@@ -94,7 +94,7 @@ public class PreProcessor {
         return ""
     }
 
-    func extractLanguageFromPlaceholder(_ placeholder: String) -> String {
+    public func extractLanguageFromPlaceholder(_ placeholder: String) -> String {
         guard let regex = try? NSRegularExpression(pattern: PreProcessor.GET_LANGUAGE_FORM_PLACEHOLDER_REGEX, options: []) else {
             return ""
         }
@@ -109,7 +109,7 @@ public class PreProcessor {
         return ""
     }
     
-    func getPlaceholdersList(pattern: String, svgTemplate: String) -> [String] {
+    public func getPlaceholdersList(pattern: String, svgTemplate: String) -> [String] {
         var placeholders = [String]()
 
         guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
@@ -178,8 +178,8 @@ extension PreProcessor {
     static let CREDENTIAL_SUBJECT_FIELD = "credentialSubject"
     static let QR_CODE_PLACEHOLDER = "{{credentialSubject/qrCodeImage}}"
     static let BENEFITS_FIELD_NAME = "benefits"
-    static let BENEFITS_PLACEHOLDER_REGEX_PATTERN = "\\{\\{credentialSubject/benefitsLine\\d+\\}\\}"
-    static let FULL_ADDRESS_PLACEHOLDER_REGEX_PATTERN = "\\{\\{credentialSubject/fullAddressLine\\d+/[a-zA-Z]+\\}\\}"
+    public static let BENEFITS_PLACEHOLDER_REGEX_PATTERN = "\\{\\{credentialSubject/benefitsLine\\d+\\}\\}"
+    public static let FULL_ADDRESS_PLACEHOLDER_REGEX_PATTERN = "\\{\\{credentialSubject/fullAddressLine\\d+/[a-zA-Z]+\\}\\}"
     static let ADDRESS_LINE_1 = "addressLine1"
     static let ADDRESS_LINE_2 = "addressLine2"
     static let ADDRESS_LINE_3 = "addressLine3"
