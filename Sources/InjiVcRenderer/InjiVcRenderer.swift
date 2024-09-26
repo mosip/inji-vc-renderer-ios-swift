@@ -16,6 +16,10 @@ public struct InjiVcRenderer {
     
     public func renderSvg(vcJsonString: String) async -> String {
           do {
+              
+              guard !vcJsonString.isEmpty else {
+                  return ""
+              }
             
               if let data = vcJsonString.data(using: .utf8),
                  let jsonObject = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
@@ -67,12 +71,16 @@ public struct InjiVcRenderer {
 
     func replacePlaceholders(svgTemplate: String, processedJson: [String: Any]) -> String {
         let regexPattern = PLACEHOLDER_REGEX_PATTERN
-        let regex = try! NSRegularExpression(pattern: regexPattern, options: [])
-        
+
+        guard let regex = try? NSRegularExpression(pattern: regexPattern, options: []) else {
+            return svgTemplate
+        }
+
         var modifiedTemplate = svgTemplate
-        
+
         regex.enumerateMatches(in: svgTemplate, options: [], range: NSRange(location: 0, length: svgTemplate.utf16.count)) { match, flags, stop in
             guard let match = match, let keyRange = Range(match.range(at: 1), in: svgTemplate) else { return }
+            
             let key = String(svgTemplate[keyRange]).trimmingCharacters(in: .whitespaces)
             let value = self.getValueFromData(key: key, jsonObject: processedJson)
             let valueString = value.map { "\($0)" } ?? ""

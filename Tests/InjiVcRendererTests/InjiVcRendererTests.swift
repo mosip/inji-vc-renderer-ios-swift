@@ -70,6 +70,19 @@ class InjiVcRendererTests: XCTestCase {
         XCTAssertEqual(result, "", "The result should be an empty string when fetching content fails")
     }
     
+    func testRenderSvgFailureEmptyJsonString() async {
+        let jsonString = """
+        """
+        
+        let mockSession = MockURLSession()
+        mockSession.mockError = NSError(domain: "Test", code: 1, userInfo: nil)
+        
+        let renderer = InjiVcRenderer(session: mockSession)
+        let result = await renderer.renderSvg(vcJsonString: jsonString)
+        
+        XCTAssertEqual(result, "", "The result should be an empty string when fetching content fails")
+    }
+    
     func testLocaleBasedFieldReplacement() {
         
         let svgTemplateWithLocale = "<svg>{{credentialSubject/gender/eng}}</svg>"

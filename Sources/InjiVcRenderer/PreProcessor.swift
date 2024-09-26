@@ -8,8 +8,13 @@ public class PreProcessor {
     private let QRCODE_IMAGE_TYPE = "data:image/png;base64,"
 
     public func preProcessVcJson(vcJsonString: String, svgTemplate: String) -> [String: Any] {
-        var vcJsonObject = try! JSONSerialization.jsonObject(with: Data(vcJsonString.utf8), options: []) as! [String: Any]
-        var credentialSubject = vcJsonObject["credentialSubject"] as! [String: Any]
+        
+        guard let data = vcJsonString.data(using: .utf8),
+              var vcJsonObject = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+              var credentialSubject = vcJsonObject["credentialSubject"] as? [String: Any] else {
+            return [:]
+        }
+
         credentialSubject = replaceFieldsWithLanguage(credentialSubject)
 
         // Check for {{qrCodeImage}} for QR Code Replacement
@@ -25,7 +30,7 @@ public class PreProcessor {
             let language = extractLanguageFromPlaceholder(benefitsPlaceholders.first ?? "")
             let commaSeparatedBenefits = generateCommaSeparatedString(jsonObject: credentialSubject, fieldsToBeCombined: [PreProcessor.BENEFITS_FIELD_NAME], language: language)
 
-            credentialSubject = constructObjectBasedOnCharacterLengthChunks(dataToSplit: commaSeparatedBenefits, placeholderList: benefitsPlaceholders, maxCharacterLength: 55, credentialSubject: credentialSubject, language: language)
+            credentialSubject = constructObjectBasedOnCharacterLengthChunks(dataToSplit: commaSeparatedBenefits, placeholderList: benefitsPlaceholders, maxCharacterLength: PreProcessor.MAXIMUM_CHARACTER_PER_LINE, credentialSubject: credentialSubject, language: language)
 
             for fieldName in [PreProcessor.BENEFITS_FIELD_NAME] {
                 credentialSubject.removeValue(forKey: fieldName)
@@ -40,7 +45,7 @@ public class PreProcessor {
             let language = extractLanguageFromPlaceholder(fullAddressPlaceholders.first ?? "")
             let commaSeparatedAddress = generateCommaSeparatedString(jsonObject: credentialSubject, fieldsToBeCombined: addressFields, language: language)
 
-            credentialSubject = constructObjectBasedOnCharacterLengthChunks(dataToSplit: commaSeparatedAddress, placeholderList: fullAddressPlaceholders, maxCharacterLength: 55, credentialSubject: credentialSubject, language: language)
+            credentialSubject = constructObjectBasedOnCharacterLengthChunks(dataToSplit: commaSeparatedAddress, placeholderList: fullAddressPlaceholders, maxCharacterLength: PreProcessor.MAXIMUM_CHARACTER_PER_LINE, credentialSubject: credentialSubject, language: language)
 
             for fieldName in addressFields {
                 credentialSubject.removeValue(forKey: fieldName)
@@ -74,27 +79,42 @@ public class PreProcessor {
     }
 
     func getFieldNameFromPlaceholder(_ placeholder: String) -> String {
-        let regex = try! NSRegularExpression(pattern: PreProcessor.GET_PLACEHOLDER_REGEX, options: [])
-        if let match = regex.firstMatch(in: placeholder, options: [], range: NSRange(location: 0, length: placeholder.utf16.count)) {
+        guard let regex = try? NSRegularExpression(pattern: PreProcessor.GET_PLACEHOLDER_REGEX, options: []) else {
+            return ""
+        }
+        
+        let nsRange = NSRange(location: 0, length: placeholder.utf16.count)
+        if let match = regex.firstMatch(in: placeholder, options: [], range: nsRange) {
             let range = match.range(at: 1)
-            let enclosedValue = (placeholder as NSString).substring(with: range)
-            return enclosedValue.split(separator: "/").last.map(String.init) ?? ""
+            if range.location != NSNotFound {
+                let enclosedValue = (placeholder as NSString).substring(with: range)
+                return enclosedValue.split(separator: "/").last.map(String.init) ?? ""
+            }
         }
         return ""
     }
 
     func extractLanguageFromPlaceholder(_ placeholder: String) -> String {
-        let regex = try! NSRegularExpression(pattern: PreProcessor.GET_LANGUAGE_FORM_PLACEHOLDER_REGEX, options: [])
-        if let match = regex.firstMatch(in: placeholder, options: [], range: NSRange(location: 0, length: placeholder.utf16.count)) {
+        guard let regex = try? NSRegularExpression(pattern: PreProcessor.GET_LANGUAGE_FORM_PLACEHOLDER_REGEX, options: []) else {
+            return ""
+        }
+        
+        let nsRange = NSRange(location: 0, length: placeholder.utf16.count)
+        if let match = regex.firstMatch(in: placeholder, options: [], range: nsRange) {
             let range = match.range(at: 1)
-            return (placeholder as NSString).substring(with: range)
+            if range.location != NSNotFound {
+                return (placeholder as NSString).substring(with: range)
+            }
         }
         return ""
     }
-
+    
     func getPlaceholdersList(pattern: String, svgTemplate: String) -> [String] {
         var placeholders = [String]()
-        let regex = try! NSRegularExpression(pattern: pattern, options: [])
+
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
+            return placeholders
+        }
         let matches = regex.matches(in: svgTemplate, options: [], range: NSRange(location: 0, length: svgTemplate.utf16.count))
 
         for match in matches {
@@ -169,4 +189,5 @@ extension PreProcessor {
     static let POSTAL_CODE = "postalCode"
     static let GET_PLACEHOLDER_REGEX = "\\{\\{credentialSubject/([^/]+)(?:/[^}]+)?\\}\\}"
     static let GET_LANGUAGE_FORM_PLACEHOLDER_REGEX = "credentialSubject/[^/]+/(\\w+)"
+    static let MAXIMUM_CHARACTER_PER_LINE = 55
 }
