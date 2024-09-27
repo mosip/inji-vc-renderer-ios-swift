@@ -30,7 +30,7 @@ jobs:
         run: xcodebuild -scheme InjiVcRenderer -destination 'generic/platform=iOS' build
 
       - name: Test project
-        run: xcodebuild test -scheme InjiVcRendererTests -destination 'platform=iOS Simulator,OS=latest'
+        run: xcodebuild test -scheme InjiVcRenderer -destination 'name=iPhone 15'
 
       - name: Notify on Slack
         uses: 8398a7/action-slack@v3
