@@ -9,7 +9,7 @@ class ViewController: UIViewController {
         
         super.viewDidLoad()
         let renderer = InjiVcRenderer()
-        let vcJsonString = """
+        let insuranceVc = """
         {
             "credentialSubject": {
                 "policyName": "Policy Name",
@@ -36,6 +36,71 @@ class ViewController: UIViewController {
                   "digestMultibase": "zQmAPdhyxzznFCwYxAp2dRerWC85Wg6wFl9G270iEu5h6JqW"
                 }]
         }
+        """
+        
+        let mosipVc = """
+         {
+                "@context": [
+                    "https://credentials/v1",
+                    "https:///.well-known/ida.json",
+                    {
+                        "sec": "https://security#"
+                    }
+                ],
+                "credentialSubject": {
+                    "VID": "1234567890",
+                    "face": "data:image/jpeg;base64,/9j/4",
+                    "gender": [
+                        {
+                            "language": "eng",
+                            "value": "MLE"
+                        }
+                    ],
+                    "phone": "+++7765837077",
+                    "city": [
+                        {
+                            "language": "eng",
+                            "value": "TEST_CITYeng"
+                        }
+                    ],
+                    "fullName": [
+                        {
+                            "language": "eng",
+                            "value": "TEST_FULLNAMEeng"
+                        }
+                    ],
+                    "addressLine1": [
+                        {
+                            "language": "eng",
+                            "value": "TEST_ADDRESSLINE1eng"
+                        }
+                    ],
+                    "dateOfBirth": "1992/04/15",
+                    "id": "did:jwk:eyJrdHkiOiJSU0EiL",
+                    "email": "mosipuser123@mailinator.com"
+                },
+                "id": "https://test.net/credentials/abcdefgh-a",
+                "issuanceDate": "2024-09-02T17:36:13.644Z",
+                "issuer": "https://test.netf/.well-known/controller.json",
+                "proof": {
+                    "created": "2024-09-02T17:36:13Z",
+                    "jws": "eyJiNj"
+                    "proofPurpose": "assertionMethod",
+                    "type": "RsaSignature2018",
+                    "verificationMethod": "https://test/.well-known/public-key.json"
+                },
+                "type": [
+                    "VerifiableCredential",
+                    "TestVerifiableCredential"
+                ],
+                "renderMethod": [
+                    {
+                        "id": "https://<svg-host-url>/assets/templates/national_id_template.svg",
+                        "type": "SvgRenderingTemplate",
+                        "name": "Portrait Mode"
+                    }
+                ]
+            }
         """
         
         Task {
